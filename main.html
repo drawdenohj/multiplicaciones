@@ -1,0 +1,703 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Multiplicaciones</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        h1 {
+            text-align: center;
+            color: #2c3e50;
+            margin-bottom: 20px;
+        }
+        .container {
+            background-color: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        .instructions {
+            background-color: #e8f4f8;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+        .exercise-container {
+            font-family: monospace;
+            font-size: 24px;
+            margin: 30px 0;
+            display: flex;
+            justify-content: center;
+        }
+        .multiplication {
+            position: relative;
+            display: grid;
+            grid-template-columns: repeat(1, auto);
+            justify-items: end;
+        }
+        .grid-row {
+            display: grid;
+            grid-template-columns: auto repeat(12, 30px); /* Primera columna para símbolos, luego suficientes para dígitos */
+            justify-content: end;
+        }
+        .digit {
+            width: 30px;
+            height: 30px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .line {
+            height: 2px;
+            background-color: black;
+            margin: 10px 0;
+            grid-column: 1 / -1;
+        }
+        .carry-input {
+            width: 20px;
+            height: 20px;
+            font-size: 14px;
+            text-align: center;
+            border: 1px solid #ddd;
+            margin: 5px auto;
+            background-color: #f9f9f9;
+        }
+        .sum-carry-input {
+            width: 20px;
+            height: 20px;
+            font-size: 14px;
+            text-align: center;
+            border: 1px solid #ddd;
+            margin: 5px auto;
+            background-color: #f0f8ff; /* Color ligeramente azulado para diferenciar */
+            display: none; /* Inicialmente oculto */
+        }
+        .result-input {
+            width: 28px;
+            height: 28px;
+            font-size: 20px;
+            text-align: center;
+            border: 1px solid #ccc;
+            margin: 1px;
+        }
+        .buttons {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 30px;
+        }
+        button {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            font-size: 16px;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #2980b9;
+        }
+        .feedback {
+            margin-top: 20px;
+            padding: 10px;
+            border-radius: 5px;
+            text-align: center;
+            font-weight: bold;
+        }
+        .correct {
+            background-color: #d4edda;
+            color: #155724;
+        }
+        .incorrect {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+        .hidden {
+            display: none;
+        }
+        .operation-symbol {
+            justify-self: end;
+            align-self: center;
+            margin-right: 5px;
+            width: 20px;
+            text-align: right;
+        }
+        .plus-symbol {
+            position: absolute;
+            left: -20px; /* Posición a la izquierda de la fila */
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 24px;
+        }
+        .plus-container {
+            position: relative; /* Para posicionar el símbolo + */
+        }
+        .result-correct {
+            background-color: #d2ffd2 !important; /* Verde claro */
+        }
+    </style>
+</head>
+<body>
+    <h1>Multiplicaciones de 2 cifras x 5 cifras</h1>
+    
+    <div class="container">
+        <div class="instructions">
+            <h3>Instrucciones:</h3>
+            <ol>
+                <li>Resuelve la multiplicación paso a paso, comenzando por la unidad del segundo factor.</li>
+                <li>Usa los espacios superiores pequeños para "llevar" cuando sea necesario.</li>
+                <li>Escribe el resultado parcial de cada paso.</li>
+                <li>Cuando completes ambas multiplicaciones, aparecerán espacios para llevar en la suma final.</li>
+                <li>Completa la suma final para obtener el resultado.</li>
+                <li>Haz clic en "Verificar" para comprobar tu respuesta.</li>
+            </ol>
+        </div>
+        
+        <div class="exercise-container">
+            <div class="multiplication" id="multiplication">
+                <!-- Aquí se generará la multiplicación -->
+            </div>
+        </div>
+        
+        <div class="buttons">
+            <button id="verify-btn">Verificar</button>
+            <button id="new-btn">Nuevo Ejercicio</button>
+            <button id="solution-btn">Mostrar Solución</button>
+        </div>
+        
+        <div id="feedback" class="feedback hidden"></div>
+    </div>
+
+    <script>
+        // Variables globales
+        let number1, number2;
+        let resultUnits, resultTens, finalResult;
+        let totalColumns; // Número total de columnas necesarias
+        
+        // Referencias DOM
+        const multiplicationEl = document.getElementById('multiplication');
+        const verifyBtn = document.getElementById('verify-btn');
+        const newBtn = document.getElementById('new-btn');
+        const solutionBtn = document.getElementById('solution-btn');
+        const feedbackEl = document.getElementById('feedback');
+        
+        // Generar número aleatorio en rango
+        function randomNumber(min, max) {
+            return Math.floor(Math.random() * (max - min + 1) + min);
+        }
+        
+        // Crear un nuevo ejercicio
+        function createExercise() {
+            // Generar números
+            number1 = randomNumber(10000, 99999);
+            number2 = randomNumber(10, 99);
+            
+            // Calcular resultados
+            const digit1 = number2 % 10; // unidades
+            const digit2 = Math.floor(number2 / 10); // decenas
+            
+            resultUnits = number1 * digit1;
+            resultTens = number1 * digit2;
+            finalResult = number1 * number2;
+            
+            // Limpiar ejercicio anterior
+            multiplicationEl.innerHTML = '';
+            feedbackEl.classList.add('hidden');
+            
+            // Determinar el número total de columnas necesarias
+            const number1Str = number1.toString();
+            const number2Str = number2.toString();
+            const finalResultStr = finalResult.toString();
+            
+            // El número total de columnas será igual al número de dígitos del resultado final
+            totalColumns = finalResultStr.length;
+            
+            // Crear la estructura del ejercicio usando grid para alineación perfecta
+            createMultiplicationGrid();
+        }
+        
+        // Crear la estructura de la multiplicación usando un grid
+        function createMultiplicationGrid() {
+            const number1Str = number1.toString();
+            const number2Str = number2.toString();
+            const finalResultStr = finalResult.toString();
+            const unitsResultStr = resultUnits.toString();
+            const tensResultStr = resultTens.toString();
+            
+            // 1. Fila para "llevar" en la primera multiplicación
+            const carryRow = document.createElement('div');
+            carryRow.className = 'grid-row';
+            carryRow.id = 'multiplication-carry-row';
+            
+            // Espacio para el símbolo de operación
+            const emptySymbol = document.createElement('div');
+            emptySymbol.className = 'operation-symbol';
+            carryRow.appendChild(emptySymbol);
+            
+            for (let i = 0; i < totalColumns; i++) {
+                // Verificar si esta posición corresponde a un dígito de number1
+                const isNumber1Position = i >= (totalColumns - number1Str.length);
+                
+                if (isNumber1Position) {
+                    const input = document.createElement('input');
+                    input.type = 'text';
+                    input.maxLength = 1;
+                    input.className = 'carry-input';
+                    input.dataset.row = 'carry';
+                    input.dataset.col = i;
+                    carryRow.appendChild(input);
+                } else {
+                    const emptyDiv = document.createElement('div');
+                    emptyDiv.className = 'digit';
+                    carryRow.appendChild(emptyDiv);
+                }
+            }
+            multiplicationEl.appendChild(carryRow);
+            
+            // 2. Primer número
+            const number1Row = document.createElement('div');
+            number1Row.className = 'grid-row';
+            
+            // Espacio para el símbolo de operación
+            const emptySymbol1 = document.createElement('div');
+            emptySymbol1.className = 'operation-symbol';
+            number1Row.appendChild(emptySymbol1);
+            
+            for (let i = 0; i < totalColumns; i++) {
+                const digitIndex = i - (totalColumns - number1Str.length);
+                
+                const digitDiv = document.createElement('div');
+                digitDiv.className = 'digit';
+                
+                if (digitIndex >= 0) {
+                    digitDiv.textContent = number1Str[digitIndex];
+                }
+                
+                number1Row.appendChild(digitDiv);
+            }
+            multiplicationEl.appendChild(number1Row);
+            
+            // 3. Segundo número con símbolo de multiplicación
+            const number2Row = document.createElement('div');
+            number2Row.className = 'grid-row';
+            
+            // Añadir símbolo de multiplicación
+            const multSymbol = document.createElement('div');
+            multSymbol.className = 'operation-symbol';
+            multSymbol.innerHTML = '&times;';
+            number2Row.appendChild(multSymbol);
+            
+            for (let i = 0; i < totalColumns; i++) {
+                const digitIndex = i - (totalColumns - number2Str.length);
+                
+                const digitDiv = document.createElement('div');
+                digitDiv.className = 'digit';
+                
+                if (digitIndex >= 0) {
+                    digitDiv.textContent = number2Str[digitIndex];
+                }
+                
+                number2Row.appendChild(digitDiv);
+            }
+            multiplicationEl.appendChild(number2Row);
+            
+            // 4. Línea separadora
+            const line1 = document.createElement('div');
+            line1.className = 'line';
+            multiplicationEl.appendChild(line1);
+            
+            // 5. Fila para "llevar" en la suma final (ahora va ANTES de los resultados parciales)
+            const sumCarryRow = document.createElement('div');
+            sumCarryRow.className = 'grid-row';
+            sumCarryRow.id = 'sum-carry-row';
+            
+            // Espacio para el símbolo de operación
+            const emptySymbol4 = document.createElement('div');
+            emptySymbol4.className = 'operation-symbol';
+            sumCarryRow.appendChild(emptySymbol4);
+            
+            for (let i = 0; i < totalColumns; i++) {
+                const input = document.createElement('input');
+                input.type = 'text';
+                input.maxLength = 1;
+                input.className = 'sum-carry-input';
+                input.dataset.row = 'sum-carry';
+                input.dataset.col = i;
+                sumCarryRow.appendChild(input);
+            }
+            multiplicationEl.appendChild(sumCarryRow);
+            
+            // 6. Primera fila de resultado (multiplicación por unidades)
+            const unitsRow = document.createElement('div');
+            unitsRow.className = 'grid-row';
+            unitsRow.id = 'units-result-row';
+            
+            // Espacio para el símbolo de operación
+            const emptySymbol2 = document.createElement('div');
+            emptySymbol2.className = 'operation-symbol';
+            unitsRow.appendChild(emptySymbol2);
+            
+            for (let i = 0; i < totalColumns; i++) {
+                const digitIndex = i - (totalColumns - unitsResultStr.length);
+                
+                if (digitIndex >= 0) {
+                    const input = document.createElement('input');
+                    input.type = 'text';
+                    input.maxLength = 1;
+                    input.className = 'result-input';
+                    input.dataset.row = 'units';
+                    input.dataset.col = i;
+                    input.dataset.expectedValue = unitsResultStr[digitIndex];
+                    unitsRow.appendChild(input);
+                } else {
+                    const emptyDiv = document.createElement('div');
+                    emptyDiv.className = 'digit';
+                    unitsRow.appendChild(emptyDiv);
+                }
+            }
+            multiplicationEl.appendChild(unitsRow);
+            
+            // 7. Segunda fila de resultado (multiplicación por decenas) con signo +
+            const tensContainer = document.createElement('div');
+            tensContainer.className = 'plus-container';
+            
+            // Añadir el signo + a la izquierda
+            const plusSymbol = document.createElement('div');
+            plusSymbol.className = 'plus-symbol';
+            plusSymbol.innerHTML = '+';
+            tensContainer.appendChild(plusSymbol);
+            
+            const tensRow = document.createElement('div');
+            tensRow.className = 'grid-row';
+            tensRow.id = 'tens-result-row';
+            
+            // Espacio para mantener alineación
+            const emptySymbol3 = document.createElement('div');
+            emptySymbol3.className = 'operation-symbol';
+            tensRow.appendChild(emptySymbol3);
+            
+            for (let i = 0; i < totalColumns; i++) {
+                // Para la multiplicación por decenas, debemos desplazar una posición a la izquierda
+                // El índice debe ajustarse para reflejar este desplazamiento
+                const digitIndex = i - (totalColumns - tensResultStr.length - 1);
+                
+                if (digitIndex >= 0 && digitIndex < tensResultStr.length) {
+                    const input = document.createElement('input');
+                    input.type = 'text';
+                    input.maxLength = 1;
+                    input.className = 'result-input';
+                    input.dataset.row = 'tens';
+                    input.dataset.col = i;
+                    input.dataset.expectedValue = tensResultStr[digitIndex];
+                    tensRow.appendChild(input);
+                } else {
+                    const emptyDiv = document.createElement('div');
+                    emptyDiv.className = 'digit';
+                    tensRow.appendChild(emptyDiv);
+                }
+            }
+            
+            tensContainer.appendChild(tensRow);
+            multiplicationEl.appendChild(tensContainer);
+            
+            // 8. Línea separadora después de los resultados parciales
+            const lineAfterPartials = document.createElement('div');
+            lineAfterPartials.className = 'line';
+            multiplicationEl.appendChild(lineAfterPartials);
+            
+            // 9. Fila del resultado final
+            const finalRow = document.createElement('div');
+            finalRow.className = 'grid-row';
+            
+            // Espacio para el símbolo de operación
+            const emptySymbol5 = document.createElement('div');
+            emptySymbol5.className = 'operation-symbol';
+            finalRow.appendChild(emptySymbol5);
+            
+            for (let i = 0; i < totalColumns; i++) {
+                const digitIndex = i - (totalColumns - finalResultStr.length);
+                
+                if (digitIndex >= 0) {
+                    const input = document.createElement('input');
+                    input.type = 'text';
+                    input.maxLength = 1;
+                    input.className = 'result-input';
+                    input.dataset.row = 'final';
+                    input.dataset.col = i;
+                    input.dataset.expectedValue = finalResultStr[digitIndex];
+                    finalRow.appendChild(input);
+                } else {
+                    const emptyDiv = document.createElement('div');
+                    emptyDiv.className = 'digit';
+                    finalRow.appendChild(emptyDiv);
+                }
+            }
+            multiplicationEl.appendChild(finalRow);
+            
+            // 10. Línea separadora final
+            const line2 = document.createElement('div');
+            line2.className = 'line';
+            multiplicationEl.appendChild(line2);
+            
+            // Configurar navegación entre inputs y eventos
+            setupInputsAndEvents();
+        }
+        
+        // Configurar navegación entre inputs y eventos
+        function setupInputsAndEvents() {
+            const inputs = document.querySelectorAll('input');
+            
+            inputs.forEach((input, index) => {
+                // Manejar teclas de dirección
+                input.addEventListener('keydown', (e) => {
+                    switch (e.key) {
+                        case 'ArrowRight':
+                            if (index < inputs.length - 1) {
+                                inputs[index + 1].focus();
+                            }
+                            break;
+                        case 'ArrowLeft':
+                            if (index > 0) {
+                                inputs[index - 1].focus();
+                            }
+                            break;
+                        case 'ArrowUp':
+                        case 'ArrowDown':
+                            navigateVertically(input, e.key === 'ArrowUp' ? 'up' : 'down');
+                            break;
+                    }
+                });
+                
+                // Avanzar automáticamente al siguiente campo y verificar parcialmente
+                input.addEventListener('input', function() {
+                    if (this.value.length === this.maxLength) {
+                        // Validar que sea un dígito
+                        if (!/^\d$/.test(this.value)) {
+                            this.value = '';
+                            return;
+                        }
+                        
+                        // Verificar parcialmente si esta respuesta es correcta
+                        if (this.dataset.expectedValue && this.value === this.dataset.expectedValue) {
+                            this.classList.add('result-correct');
+                        } else if (this.dataset.expectedValue) {
+                            this.classList.remove('result-correct');
+                        }
+                        
+                        // Encontrar el siguiente input
+                        const nextInput = inputs[index + 1];
+                        if (nextInput) {
+                            nextInput.focus();
+                        }
+                        
+                        // Comprobar si debemos mostrar los inputs para llevar en la suma
+                        checkAndShowSumCarryInputs();
+                    }
+                });
+            });
+            
+            // Enfocar el primer input
+            if (inputs.length > 0) {
+                inputs[0].focus();
+            }
+        }
+        
+        // Comprobar si ambas filas de multiplicación están completas y mostrar los inputs para llevar en la suma
+        function checkAndShowSumCarryInputs() {
+            const unitsInputs = document.querySelectorAll('input[data-row="units"]');
+            const tensInputs = document.querySelectorAll('input[data-row="tens"]');
+            const sumCarryInputs = document.querySelectorAll('.sum-carry-input');
+            
+            let unitsComplete = true;
+            let tensComplete = true;
+            
+            // Verificar si todas las casillas de la primera multiplicación están completas
+            unitsInputs.forEach(input => {
+                if (!input.value) {
+                    unitsComplete = false;
+                }
+            });
+            
+            // Verificar si todas las casillas de la segunda multiplicación están completas
+            tensInputs.forEach(input => {
+                if (!input.value) {
+                    tensComplete = false;
+                }
+            });
+            
+            // Si ambas filas están completas, mostrar los inputs para llevar en la suma
+            if (unitsComplete && tensComplete) {
+                sumCarryInputs.forEach(input => {
+                    input.style.display = 'block';
+                });
+            }
+        }
+        
+        // Navegación vertical entre inputs
+        function navigateVertically(currentInput, direction) {
+            const row = currentInput.dataset.row;
+            const col = parseInt(currentInput.dataset.col);
+            
+            let targetRow;
+            
+            // Determinar la fila objetivo basada en la dirección y la fila actual
+            if (direction === 'up') {
+                if (row === 'final') targetRow = 'tens';
+                else if (row === 'tens') targetRow = 'units';
+                else if (row === 'units') targetRow = 'sum-carry';
+                else if (row === 'sum-carry') targetRow = 'carry';
+            } else {
+                if (row === 'carry') targetRow = 'sum-carry';
+                else if (row === 'sum-carry') targetRow = 'units';
+                else if (row === 'units') targetRow = 'tens';
+                else if (row === 'tens') targetRow = 'final';
+            }
+            
+            if (targetRow) {
+                // Buscar el input en la fila objetivo con la misma columna
+                const targetInput = document.querySelector(`input[data-row="${targetRow}"][data-col="${col}"]`);
+                
+                // Solo enfocar si existe y es visible
+                if (targetInput && (targetRow !== 'sum-carry' || targetInput.style.display === 'block')) {
+                    targetInput.focus();
+                } else if (direction === 'up' && row === 'units') {
+                    // Si vamos hacia arriba desde units y sum-carry no está visible, ir directamente a carry
+                    const carryInput = document.querySelector(`input[data-row="carry"][data-col="${col}"]`);
+                    if (carryInput) carryInput.focus();
+                } else if (direction === 'down' && row === 'sum-carry') {
+                    // Si vamos hacia abajo desde sum-carry, ir a units
+                    const unitsInput = document.querySelector(`input[data-row="units"][data-col="${col}"]`);
+                    if (unitsInput) unitsInput.focus();
+                }
+            }
+        }
+        
+        // Verificar respuestas
+        function verifyAnswers() {
+            const inputs = document.querySelectorAll('input[data-expected-value]');
+            let allCorrect = true;
+            
+            inputs.forEach(input => {
+                const expectedValue = input.dataset.expectedValue;
+                
+                if (input.value === expectedValue) {
+                    input.style.backgroundColor = '#d2ffd2'; // Verde claro
+                } else {
+                    input.style.backgroundColor = '#ffd2d2'; // Rojo claro
+                    allCorrect = false;
+                }
+            });
+            
+            // Mostrar feedback
+            feedbackEl.classList.remove('hidden');
+            
+            if (allCorrect) {
+                feedbackEl.textContent = '¡Correcto! Has completado la multiplicación perfectamente.';
+                feedbackEl.classList.add('correct');
+                feedbackEl.classList.remove('incorrect');
+            } else {
+                feedbackEl.textContent = 'Hay errores en tus respuestas. Revisa tus cálculos e inténtalo de nuevo.';
+                feedbackEl.classList.add('incorrect');
+                feedbackEl.classList.remove('correct');
+            }
+        }
+        
+        // Mostrar la solución
+        function showSolution() {
+            // Mostrar los inputs para llevar en la suma
+            const sumCarryInputs = document.querySelectorAll('.sum-carry-input');
+            sumCarryInputs.forEach(input => {
+                input.style.display = 'block';
+            });
+            
+            // Rellenar los campos de "llevar" para la primera multiplicación
+            const carryInputs = document.querySelectorAll('input[data-row="carry"]');
+            const number1Str = number1.toString();
+            const digit1 = number2 % 10; // unidades
+            
+            // Calcular los valores de llevada para la primera multiplicación
+            let carry = 0;
+            const carries = [];
+            
+            for (let i = number1Str.length - 1; i >= 0; i--) {
+                const product = parseInt(number1Str[i]) * digit1 + carry;
+                carry = Math.floor(product / 10);
+                carries.unshift(carry);
+            }
+            
+            // Asignar valores de llevada a los campos correspondientes
+            carryInputs.forEach((input, i) => {
+                const carryIndex = i - (carryInputs.length - carries.length);
+                
+                if (carryIndex >= 0 && carries[carryIndex] > 0) {
+                    input.value = carries[carryIndex];
+                    input.style.backgroundColor = '#d2ffd2';
+                } else {
+                    input.value = '';
+                    input.style.backgroundColor = '#f9f9f9';
+                }
+            });
+            
+            // Calcular los valores de llevada para la suma final
+            const unitsResultStr = resultUnits.toString();
+            const tensResultStr = resultTens.toString();
+            
+            // Preparar arrays para la suma
+            const unitsDigits = unitsResultStr.padStart(totalColumns, '0').split('').map(Number);
+            const tensDigits = (tensResultStr + '0').padStart(totalColumns + 1, '0').split('').map(Number);
+            
+            // Calcular los valores de llevada para la suma
+            carry = 0;
+            const sumCarries = [];
+            
+            for (let i = totalColumns - 1; i >= 0; i--) {
+                const sum = unitsDigits[i] + tensDigits[i + 1] + carry;
+                carry = Math.floor(sum / 10);
+                sumCarries.unshift(carry);
+            }
+            
+            // Asignar valores de llevada a los campos de la suma
+            sumCarryInputs.forEach((input, i) => {
+                const carryIndex = i - (sumCarryInputs.length - sumCarries.length);
+                
+                if (carryIndex >= 0 && sumCarries[carryIndex] > 0) {
+                    input.value = sumCarries[carryIndex];
+                    input.style.backgroundColor = '#d2ffd2';
+                } else {
+                    input.value = '';
+                    input.style.backgroundColor = '#f0f8ff';
+                }
+            });
+            
+            // Rellenar todos los campos con valores esperados
+            const resultInputs = document.querySelectorAll('input[data-expected-value]');
+            
+            resultInputs.forEach(input => {
+                input.value = input.dataset.expectedValue;
+                input.style.backgroundColor = '#d2ffd2';
+            });
+            
+            // Mostrar mensaje
+            feedbackEl.classList.remove('hidden');
+            feedbackEl.textContent = 'Aquí tienes la solución completa.';
+            feedbackEl.classList.add('correct');
+            feedbackEl.classList.remove('incorrect');
+        }
+        
+        // Event listeners
+        verifyBtn.addEventListener('click', verifyAnswers);
+        newBtn.addEventListener('click', createExercise);
+        solutionBtn.addEventListener('click', showSolution);
+        
+        // Iniciar con un ejercicio
+        createExercise();
+    </script>
+</body>
+</html>
