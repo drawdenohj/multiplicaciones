@@ -59,6 +59,7 @@
             background-color: black;
             margin: 10px 0;
             grid-column: 1 / -1;
+            width: 100%;
         }
         .carry-input {
             width: 20px;
@@ -152,7 +153,7 @@
             <h3>Instrucciones:</h3>
             <ol>
                 <li>Resuelve la multiplicación paso a paso, comenzando por la unidad del segundo factor.</li>
-                <li>Usa los espacios superiores pequeños para "llevar" cuando sea necesario.</li>
+                <li>Usa los espacios superiores para "llevar" cuando sea necesario.</li>
                 <li>Escribe el resultado parcial de cada paso.</li>
                 <li>Cuando completes ambas multiplicaciones, aparecerán espacios para llevar en la suma final.</li>
                 <li>Completa la suma final para obtener el resultado.</li>
@@ -231,7 +232,7 @@
             const unitsResultStr = resultUnits.toString();
             const tensResultStr = resultTens.toString();
             
-            // 1. Fila para "llevar" en la primera multiplicación
+            // 1. Fila para "llevar" en la primera multiplicación - omitiendo el espacio para el dígito de las unidades
             const carryRow = document.createElement('div');
             carryRow.className = 'grid-row';
             carryRow.id = 'multiplication-carry-row';
@@ -242,10 +243,11 @@
             carryRow.appendChild(emptySymbol);
             
             for (let i = 0; i < totalColumns; i++) {
-                // Verificar si esta posición corresponde a un dígito de number1
+                // Verificar si esta posición corresponde a un dígito de number1, excepto el último (unidades)
                 const isNumber1Position = i >= (totalColumns - number1Str.length);
+                const isLastDigit = i === (totalColumns - 1); // El último dígito (unidades)
                 
-                if (isNumber1Position) {
+                if (isNumber1Position && !isLastDigit) {
                     const input = document.createElement('input');
                     input.type = 'text';
                     input.maxLength = 1;
@@ -308,9 +310,11 @@
             }
             multiplicationEl.appendChild(number2Row);
             
-            // 4. Línea separadora
+            // 4. Línea separadora horizontal completa
             const line1 = document.createElement('div');
             line1.className = 'line';
+            line1.style.width = "110%"; // Hacer que la línea sea más ancha que el grid
+            line1.style.marginLeft = "-10%"; // Extender la línea hacia la izquierda
             multiplicationEl.appendChild(line1);
             
             // 5. Fila para "llevar" en la suma final (ahora va ANTES de los resultados parciales)
@@ -407,9 +411,11 @@
             tensContainer.appendChild(tensRow);
             multiplicationEl.appendChild(tensContainer);
             
-            // 8. Línea separadora después de los resultados parciales
+            // 8. Línea separadora después de los resultados parciales - más larga
             const lineAfterPartials = document.createElement('div');
             lineAfterPartials.className = 'line';
+            lineAfterPartials.style.width = "110%"; // Hacer que la línea sea más ancha que el grid
+            lineAfterPartials.style.marginLeft = "-10%"; // Extender la línea hacia la izquierda
             multiplicationEl.appendChild(lineAfterPartials);
             
             // 9. Fila del resultado final
@@ -440,11 +446,6 @@
                 }
             }
             multiplicationEl.appendChild(finalRow);
-            
-            // 10. Línea separadora final
-            const line2 = document.createElement('div');
-            line2.className = 'line';
-            multiplicationEl.appendChild(line2);
             
             // Configurar navegación entre inputs y eventos
             setupInputsAndEvents();
@@ -632,11 +633,12 @@
                 carries.unshift(carry);
             }
             
-            // Asignar valores de llevada a los campos correspondientes
+            // Asignar valores de llevada a los campos correspondientes (excepto el último)
             carryInputs.forEach((input, i) => {
-                const carryIndex = i - (carryInputs.length - carries.length);
+                // Ajustar índice para saltarnos el último dígito (unidades)
+                const carryIndex = i - (carryInputs.length - carries.length) + 1;
                 
-                if (carryIndex >= 0 && carries[carryIndex] > 0) {
+                if (carryIndex >= 0 && carryIndex < carries.length - 1 && carries[carryIndex] > 0) {
                     input.value = carries[carryIndex];
                     input.style.backgroundColor = '#d2ffd2';
                 } else {
